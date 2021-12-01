@@ -1,0 +1,94 @@
+{
+  "name": "decker-server",
+  "displayName": "Decker Server",
+  "description": "Automatically starts a decker server upon opening a decker workspace and offers commands to start and stop the server as well as logging utilities.",
+  "version": "0.0.2",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/salbeira/vscode-decker-server"
+  },
+  "engines": {
+    "vscode": "^1.62.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onLanguage:markdown"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "configuration": {
+      "title": "Decker Server",
+      "properties": {
+        "decker.server.autostart" : {
+          "type": "boolean",
+          "default": "true",
+          "description": "Start the Decker Server automatically in the background when opening a decker workspace?"
+        },
+        "decker.executable.command": {
+          "type": "string",
+          "default": "decker",
+          "description": "The path or command to execute decker. If installed and on your PATH, 'decker' should suffice but if you want to use another executable change this value."
+        }
+      }
+    },
+    "menus": {
+      "editor/context": [
+        {
+          "when": "resourceLangId == markdown",
+          "command": "decker-server.open-browser"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "decker-server.start",
+        "title": "Start Decker Server"
+      },
+      {
+        "command": "decker-server.stop",
+        "title": "Stop Decker Server"
+      },
+      {
+        "command": "decker-server.toggle",
+        "title": "Toggle Decker Server"
+      },
+      {
+        "command": "decker-server.open-browser",
+        "title": "Open Slides in Browser"
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run package",
+    "compile": "webpack",
+    "watch": "webpack --watch",
+    "package": "webpack --mode production --devtool hidden-source-map",
+    "compile-tests": "tsc -p . --outDir out",
+    "watch-tests": "tsc -p . -w --outDir out",
+    "pretest": "npm run compile-tests && npm run compile && npm run lint",
+    "lint": "eslint src --ext ts",
+    "test": "node ./out/test/runTest.js"
+  },
+  "devDependencies": {
+    "@types/glob": "^7.1.4",
+    "@types/mocha": "^9.0.0",
+    "@types/node": "14.x",
+    "@types/vscode": "^1.62.0",
+    "@typescript-eslint/eslint-plugin": "^5.1.0",
+    "@typescript-eslint/parser": "^5.1.0",
+    "@vscode/test-electron": "^1.6.2",
+    "eslint": "^8.1.0",
+    "glob": "^7.1.7",
+    "mocha": "^9.1.3",
+    "ts-loader": "^9.2.5",
+    "typescript": "^4.4.4",
+    "webpack": "^5.52.1",
+    "webpack-cli": "^4.8.0"
+  },
+  "dependencies": {
+    "command-exists": "^1.2.9",
+    "open": "^8.4.0"
+  }
+}
