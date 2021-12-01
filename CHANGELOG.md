@@ -2,6 +2,10 @@
 
 Changes may be tracked here.
 
+## [0.0.3]
+
+- Added publisher to package.json
+
 ## [0.0.2]
 
 - Updating Status Bar if server is already running.
