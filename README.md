@@ -31,12 +31,4 @@ The webview advice about installing a decker server is functional but looks ugly
 
 ### 0.0.3
 
-Added publisher to package.json
-
-### 0.0.2
-
-Fixing status bar not always updating.
-
-### 0.0.1
-
 Initial release.
