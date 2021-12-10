@@ -1,6 +1,10 @@
 import { ChildProcessWithoutNullStreams, exec, spawn } from 'child_process';
 import * as vscode from 'vscode';
 import * as open from 'open';
+import * as os from 'os';
+import * as fs from 'fs';
+import * as http from 'http';
+import * as https from 'https';
 const exists = require("command-exists");
 
 let deckerProcess : ChildProcessWithoutNullStreams | null = null;
@@ -42,11 +46,63 @@ export function activate(context: vscode.ExtensionContext) {
 		openBrowser();
 	});
 
+	vscode.commands.registerCommand("decker-server.open-preview", () => {
+		const html : string = makePreview();
+		openSideView(html);
+	});
+
 	createStatusBarItem(context);
 
 	if(config.get("server.autostart")) {
 		startDeckerServer();
 	}
+}
+
+function makePreview() : string {
+	let fileName = vscode.window.activeTextEditor?.document.fileName;
+	if(fileName) {
+		let relative = vscode.workspace.asRelativePath(fileName);
+		if(relative.endsWith(".md")) {
+			let path = relative.replace(".md", ".html");
+			const previewHTML : string = String.raw
+			`<!DOCTYPE html>
+			<html lang="en" style="width: 100%; height: 100%;">
+			<head>
+				<meta charset="UTF-8">
+				<meta name="viewport" content="width=device-width, initial-scale=1.0">
+				<title>Decker Preview</title>
+			</head>
+			<body style="width: 100%; height: 100%;">
+				<iframe style="width: 100%; height: 100%;" src="http://localhost:8888/${path}" title=""></iframe> 
+			</body>
+			</html>`;
+			return previewHTML;
+			} else {
+				return makeErrorHTML("The file this command was invoced on was no markdown (.md) file.");
+			}
+		} else {
+		return makeErrorHTML("The command was not invoced on a markdown file.");
+	}
+}
+
+function makeErrorHTML(message : string) : string {
+	return String.raw
+	`<!DOCTYPE html>
+	<html lang="en" style="width: 100%; height: 100%;">
+	<head>
+		<meta charset="UTF-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0">
+		<title>Error</title>
+	</head>
+	<body style="width: 100%; height: 100%;">
+		<h1>${message}</h1>
+	</body>
+	</html>`;
+}
+
+function openSideView(html : string) : void {
+	const panel = vscode.window.createWebviewPanel("previewPanel", "Decker Preview", vscode.ViewColumn.Two, {enableScripts: true});
+	panel.webview.html = html;
 }
 
 function openBrowser() {
@@ -100,6 +156,7 @@ function startDeckerServer() {
 				if (running) {
 					vscode.window.showInformationMessage("A decker server is already running on this system.");
 					updateStatusBarItem();
+				} else {
 					const workspaceFolders = vscode.workspace.workspaceFolders;
 					if (!workspaceFolders) {
 						return;
@@ -142,9 +199,9 @@ function stopDeckerServer() {
 				deckerProcess = null;
 				deckerLog.stdout.forEach(console.log);
 				deckerLog.stderr.forEach(console.error);
-				updateStatusBarItem();
 			}
 		}
+		updateStatusBarItem();
 	});
 }
 
@@ -178,6 +235,25 @@ async function checkedInstalled(): Promise<boolean> {
 	});
 }
 
+function getStorageDirectory(context: vscode.ExtensionContext){
+	let storage: string | undefined = vscode.workspace.getConfiguration('decker-server').get('storagePath');
+	if(!storage) {
+		storage = context.globalStorageUri.fsPath;
+	} else {
+		storage.replace("${HOME}", os.homedir).replace("${home}", os.homedir).replace(/^~/, os.homedir);
+		if(vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders[0]) {
+			let folder = vscode.workspace.workspaceFolders[0].uri.fsPath;
+			storage.replace("${workspaceFolder}", folder).replace("${workspaceRoot}", folder);
+		}
+	}
+	return storage;
+}
+
+//TODO Get this from github once migration is done
+function getCurrentDeckerVersion() : string {
+	return "0.11";
+}
+
 export function deactivate() {
 	stopDeckerServer();
 }
@@ -188,11 +264,11 @@ const configHTML : string = String.raw
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Configure Decker Server</title>
+    <title>Install Decker</title>
 </head>
-<body">
+<body>
     <h1>Install decker</h1>
 	<p>We could not find decker on your system.</p>
-	<a href="https://elearning.uni-wuerzburg.de/decker/" style="width: 256px; height: 64px; background: white; color: black;">Please download decker here</a>
+	<a href="https://elearning.uni-wuerzburg.de/decker/" style="width: 256px; height: 64px;">Please download decker here</a>
 </body>
 </html>`;

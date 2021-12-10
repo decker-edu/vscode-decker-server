@@ -2,7 +2,7 @@
   "name": "decker-server",
   "displayName": "Decker Server",
   "description": "Automatically starts a decker server upon opening a decker workspace and offers commands to start and stop the server as well as logging utilities.",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "publisher": "decker-edu",
   "repository": {
     "type": "git",
@@ -15,7 +15,7 @@
     "Other"
   ],
   "activationEvents": [
-    "onLanguage:markdown"
+    "workspaceContains:**/decker.yaml"
   ],
   "main": "./dist/extension.js",
   "contributes": {
@@ -39,6 +39,10 @@
         {
           "when": "resourceLangId == markdown",
           "command": "decker-server.open-browser"
+        },
+        {
+          "when": "resourceLangId == markdown",
+          "command": "decker-server.open-preview"
         }
       ]
     },
@@ -58,6 +62,10 @@
       {
         "command": "decker-server.open-browser",
         "title": "Open Slides in Browser"
+      },
+      {
+        "command": "decker-server.open-preview",
+        "title": "Open Slides Preview Panel"
       }
     ]
   },
