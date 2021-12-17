@@ -12,16 +12,9 @@ let statusBarItem: vscode.StatusBarItem;
 
 let deckerCommand : string;
 
-class Log {
-	stdout: Array<string>;
-	stderr: Array<string>;
-	constructor() {
-		this.stdout = [];
-		this.stderr = [];
-	}
-};
-
-let deckerLog : Log;
+let logChannel = vscode.window.createOutputChannel("Decker Server: log");
+let stdoutChannel = vscode.window.createOutputChannel("Decker Server: stdout");
+let stderrChannel = vscode.window.createOutputChannel("Decker Server: stderr");
 
 export function activate(context: vscode.ExtensionContext) {
 
@@ -162,24 +155,23 @@ function startDeckerServer() {
 						return;
 					}
 					const workspaceDirecotry = workspaceFolders[0].uri.fsPath;
-					deckerLog = new Log();
 					deckerProcess = spawn(deckerCommand, ["--server"], { cwd: workspaceDirecotry, env: process.env });
 					deckerProcess.stdout.on("data", (data) => {
-						deckerLog.stdout.push(data.toString());
+						stdoutChannel.appendLine(data.toString());
 					});
 					deckerProcess.stderr.on("data", (data) => {
-						deckerLog.stderr.push(data.toString());
+						stderrChannel.appendLine(data.toString());
 					});
 					deckerProcess.on("close", (code) => {
 						vscode.window.showInformationMessage("Decker Server terminated.");
 						if (code) {
-							console.log(`[DECKER CLOSE] Server closed with exitcode: ${code}`);
+							logChannel.appendLine(`[DECKER CLOSE] Server closed with exitcode: ${code}`);
 						} else {
-							console.log(`[DECKER CLOSE] Server Closed`);
+							logChannel.appendLine(`[DECKER CLOSE] Server Closed`);
 						}
 					});
 					deckerProcess.on("error", (error) => {
-						console.error(error);
+						logChannel.appendLine(`[DECKER ERROR] ${error.message}`);
 					});
 					vscode.window.showInformationMessage(`Started Decker Server in: ${workspaceDirecotry}`);
 					updateStatusBarItem();
@@ -197,8 +189,6 @@ function stopDeckerServer() {
 			if(deckerProcess) {
 				deckerProcess.kill();
 				deckerProcess = null;
-				deckerLog.stdout.forEach(console.log);
-				deckerLog.stderr.forEach(console.error);
 			}
 		}
 		updateStatusBarItem();
@@ -210,7 +200,7 @@ async function isRunning (query : string) : Promise<boolean> {
 	let cmd = "";
 	switch(platform) {
 		case "win32" : cmd = "tasklist"; break;
-		case "darwin" : cmd = "ps -ax | grep " + query; break;
+		case "darwin" : cmd = "ps -ax | grep -v grep | grep " + query; break;
 		case "linux" : cmd = "ps -A"; break;
 		default: break;
 	}
