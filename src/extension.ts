@@ -71,10 +71,10 @@ function makePreview() : string {
 			</html>`;
 			return previewHTML;
 			} else {
-				return makeErrorHTML("The file this command was invoced on was no markdown (.md) file.");
+				return makeErrorHTML("The file this command was invoked on was no markdown (.md) file.");
 			}
 		} else {
-		return makeErrorHTML("The command was not invoced on a markdown file.");
+		return makeErrorHTML("The command was not invoked on a markdown file.");
 	}
 }
 
