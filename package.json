@@ -44,6 +44,18 @@
           "when": "resourceLangId == markdown",
           "command": "decker-server.open-preview"
         }
+      ],
+      "editor/title": [
+        {
+          "when": "editorLangId == markdown",
+          "command": "decker-server.open-preview",
+          "group": "navigation"
+        },
+        {
+          "when": "editorLangId == markdown",
+          "command": "decker-server.open-browser",
+          "group": "navigation"
+        }
       ]
     },
     "commands": [
@@ -61,11 +73,13 @@
       },
       {
         "command": "decker-server.open-browser",
-        "title": "Open Slides in Browser"
+        "title": "Open Slides in Browser",
+        "icon": "$(globe)"
       },
       {
         "command": "decker-server.open-preview",
-        "title": "Open Slides Preview Panel"
+        "title": "Open Slides Preview Panel",
+        "icon": "$(preview)"
       }
     ]
   },
