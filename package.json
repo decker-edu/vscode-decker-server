@@ -2,7 +2,7 @@
   "name": "decker-server",
   "displayName": "Decker Server",
   "description": "Automatically starts a decker server upon opening a decker workspace and offers commands to start and stop the server as well as logging utilities.",
-  "version": "0.0.6",
+  "version": "0.0.7",
   "publisher": "decker-edu",
   "repository": {
     "type": "git",

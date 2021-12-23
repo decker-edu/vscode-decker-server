@@ -2,9 +2,8 @@ import { ChildProcessWithoutNullStreams, exec, spawn } from 'child_process';
 import * as vscode from 'vscode';
 import * as open from 'open';
 import * as os from 'os';
-import * as fs from 'fs';
-import * as http from 'http';
-import * as https from 'https';
+import * as path from 'path';
+
 const exists = require("command-exists");
 
 let deckerProcess : ChildProcessWithoutNullStreams | null = null;
@@ -16,7 +15,10 @@ let logChannel = vscode.window.createOutputChannel("Decker Server: log");
 let stdoutChannel = vscode.window.createOutputChannel("Decker Server: stdout");
 let stderrChannel = vscode.window.createOutputChannel("Decker Server: stderr");
 
+let extensionPath : string;
+
 export function activate(context: vscode.ExtensionContext) {
+	extensionPath = context.extensionPath;
 
 	let config = vscode.workspace.getConfiguration('decker');
 	let deckerCommandConfig : string | undefined = config.get("executable.command");
@@ -40,79 +42,106 @@ export function activate(context: vscode.ExtensionContext) {
 	});
 
 	vscode.commands.registerCommand("decker-server.open-preview", () => {
-		const html : string = makePreview();
-		openSideView(html);
+		openPreview();
 	});
 
 	createStatusBarItem(context);
+	updateStatusBarItem();
 
 	if(config.get("server.autostart")) {
 		startDeckerServer();
 	}
 }
 
-function makePreview() : string {
-	let fileName = vscode.window.activeTextEditor?.document.fileName;
-	if(fileName) {
-		let relative = vscode.workspace.asRelativePath(fileName);
-		if(relative.endsWith(".md")) {
-			let path = relative.replace(".md", ".html");
-			const previewHTML : string = String.raw
-			`<!DOCTYPE html>
-			<html lang="en" style="width: 100%; height: 100%;">
-			<head>
-				<meta charset="UTF-8">
-				<meta name="viewport" content="width=device-width, initial-scale=1.0">
-				<title>Decker Preview</title>
-			</head>
-			<body style="width: 100%; height: 100%;">
-				<iframe style="width: 100%; height: 100%;" src="http://localhost:8888/${path}" title=""></iframe> 
-			</body>
-			</html>`;
-			return previewHTML;
-			} else {
-				return makeErrorHTML("The file this command was invoked on was no markdown (.md) file.");
-			}
-		} else {
-		return makeErrorHTML("The command was not invoked on a markdown file.");
-	}
-}
-
-function makeErrorHTML(message : string) : string {
+function makePreviewHTML(htmlPath : string, cssPath : string) : string {
 	return String.raw
-	`<!DOCTYPE html>
-	<html lang="en" style="width: 100%; height: 100%;">
-	<head>
-		<meta charset="UTF-8">
-		<meta name="viewport" content="width=device-width, initial-scale=1.0">
-		<title>Error</title>
-	</head>
-	<body style="width: 100%; height: 100%;">
-		<h1>${message}</h1>
-	</body>
-	</html>`;
+`<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="${cssPath}">
+	<title>Decker Preview</title>
+</head>
+<body>
+	<iframe src="http://localhost:8888/${htmlPath}"></iframe> 
+</body>
+</html>`;
 }
 
-function openSideView(html : string) : void {
-	const panel = vscode.window.createWebviewPanel("previewPanel", "Decker Preview", vscode.ViewColumn.Two, {enableScripts: true});
-	panel.webview.html = html;
+function makeErrorHTML(message : string, cssPath : string) : string {
+	return String.raw
+`<!DOCTYPE html>
+<html lang="en" style="width: 100%; height: 100%;">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="${cssPath}">
+	<title>Error</title>
+	</style>
+</head>
+<body>
+	<h1>${message}</h1>
+</body>
+</html>`;
 }
 
-function openBrowser() {
+async function openPreview() {
+	const editor = vscode.window.activeTextEditor;
+	const panel : vscode.WebviewPanel = vscode.window.createWebviewPanel("previewPanel", "Decker Preview", vscode.ViewColumn.Two, {enableScripts: true});
+	const cssURI : vscode.Uri = vscode.Uri.file(path.join(extensionPath, "res", "webview.css"));
+	const webviewURI : vscode.Uri = panel.webview.asWebviewUri(cssURI);
 	if(!deckerProcess) {
-		startDeckerServer();
-	}
-	let fileName = vscode.window.activeTextEditor?.document.fileName;
-	if(fileName) {
-		let relative = vscode.workspace.asRelativePath(fileName);
-		if(relative.endsWith(".md")) {
-			let path = relative.replace(".md", ".html");
-			open(`http://localhost:8888/${path}`);
+		await startDeckerServer();
+		if(!deckerProcess) {
+			panel.webview.html = makeErrorHTML("Unable to start a decker server in the workbench directory.", webviewURI.toString());
 			return;
 		}
 	}
-	open("http://localhost:8888");
+	if(editor) {
+		const htmlPath : string | undefined = getDocumentHTMLPath(editor.document);
+		if(htmlPath) {
+			panel.webview.html = makePreviewHTML(htmlPath, webviewURI.toString());
+		} else {
+			panel.webview.html = makeErrorHTML("Preview was not opened in a markdown file.", webviewURI.toString());
+		}
+	} else {
+		panel.webview.html = makeErrorHTML("No active document.", webviewURI.toString());
+	}
 
+}
+
+function getDocumentHTMLPath(document : vscode.TextDocument) : string | undefined {
+	let fileName = document.fileName;
+	if(fileName) {
+		let relative = vscode.workspace.asRelativePath(fileName);
+		if(relative.endsWith(".md")) {
+			return relative.replace(".md", ".html");
+		} else {
+			return undefined;
+		}
+	}
+	return undefined;
+}
+
+async function openBrowser() {
+	const editor = vscode.window.activeTextEditor;
+	if(!editor) {
+		vscode.window.showErrorMessage("No active document.");
+		return;
+	}
+	if(!deckerProcess) {
+		await startDeckerServer();
+		if(!deckerProcess) {
+			return;
+		}
+	}
+	let path = getDocumentHTMLPath(editor.document);
+	if(path) {
+		open(`http://localhost:8888/${path}`);
+	} else {
+		open("http://localhost:8888");
+	}
 }
 
 function showInstallWebview() {
@@ -128,71 +157,69 @@ function createStatusBarItem(context: vscode.ExtensionContext) {
 	context.subscriptions.push(statusBarItem);
 }
 
-function updateStatusBarItem() {
-	isRunning("decker").then((running) => {
-		if(running) {
-			if(deckerProcess) {
-				statusBarItem.text = "$(play) Decker Server Running";
-			} else {
-				statusBarItem.text = "$(play) External Decker Server Running";
-			}
-		} else {
-			statusBarItem.text = "$(warning) Decker Server Offline";
+async function updateStatusBarItem() {
+	const running = await isRunning("decker");
+	if(running) {
+		if(deckerProcess) { //Running, and we actually hava a handle to a process so it is us running it.
+			statusBarItem.text = "$(play) Decker Server Running";
+		} else { //Running, but we have no handle to the process, so it is running externally.
+			statusBarItem.text = "$(play) External Decker Server Running";
 		}
-	});
+	} else { //Not running at all.
+		statusBarItem.text = "$(warning) Decker Server Offline";
+	}
 }
 
-function startDeckerServer() {
-	checkedInstalled().then((installed) => {
-		if (installed) {
-			isRunning("decker").then((running) => {
-				if (running) {
-					vscode.window.showInformationMessage("A decker server is already running on this system.");
-					updateStatusBarItem();
+async function startDeckerServer() {
+	const installed : boolean = await checkedInstalled();
+	if (installed) {
+		const running : boolean = await isRunning("decker");
+		if (running) {
+			vscode.window.showInformationMessage("A decker server is already running on this system.");
+			updateStatusBarItem();
+		} else {
+			const workspaceFolders = vscode.workspace.workspaceFolders;
+			if (!workspaceFolders) {
+				vscode.window.showErrorMessage("No workspace is open to start a decker server in.");
+				return;
+			}
+			const workspaceDirecotry = workspaceFolders[0].uri.fsPath;
+			deckerProcess = spawn(deckerCommand, ["--server"], { cwd: workspaceDirecotry, env: process.env });
+			deckerProcess.stdout.on("data", (data) => {
+				stdoutChannel.appendLine(data.toString());
+			});
+			deckerProcess.stderr.on("data", (data) => {
+				stderrChannel.appendLine(data.toString());
+			});
+			deckerProcess.on("close", (code) => {
+				vscode.window.showInformationMessage("Decker Server terminated.");
+				if (code) {
+					logChannel.appendLine(`[DECKER CLOSE] Server closed with exitcode: ${code}`);
 				} else {
-					const workspaceFolders = vscode.workspace.workspaceFolders;
-					if (!workspaceFolders) {
-						return;
-					}
-					const workspaceDirecotry = workspaceFolders[0].uri.fsPath;
-					deckerProcess = spawn(deckerCommand, ["--server"], { cwd: workspaceDirecotry, env: process.env });
-					deckerProcess.stdout.on("data", (data) => {
-						stdoutChannel.appendLine(data.toString());
-					});
-					deckerProcess.stderr.on("data", (data) => {
-						stderrChannel.appendLine(data.toString());
-					});
-					deckerProcess.on("close", (code) => {
-						vscode.window.showInformationMessage("Decker Server terminated.");
-						if (code) {
-							logChannel.appendLine(`[DECKER CLOSE] Server closed with exitcode: ${code}`);
-						} else {
-							logChannel.appendLine(`[DECKER CLOSE] Server Closed`);
-						}
-					});
-					deckerProcess.on("error", (error) => {
-						logChannel.appendLine(`[DECKER ERROR] ${error.message}`);
-					});
-					vscode.window.showInformationMessage(`Started Decker Server in: ${workspaceDirecotry}`);
-					updateStatusBarItem();
+					logChannel.appendLine(`[DECKER CLOSE] Server Closed`);
 				}
 			});
-		} else {
-			showInstallWebview();
+			deckerProcess.on("error", (error) => {
+				logChannel.appendLine(`[DECKER ERROR] ${error.message}`);
+			});
+			vscode.window.showInformationMessage(`Started Decker Server in: ${workspaceDirecotry}`);
+			updateStatusBarItem();
 		}
-	});
+	} else {
+		showInstallWebview();
+		updateStatusBarItem();
+	}
 }
 
-function stopDeckerServer() {
-	isRunning("decker").then((running) => {
-		if(running) {
-			if(deckerProcess) {
-				deckerProcess.kill();
-				deckerProcess = null;
-			}
+async function stopDeckerServer() {
+	const running = await isRunning("decker");
+	if(running) {
+		if(deckerProcess) {
+			deckerProcess.kill();
+			deckerProcess = null;
 		}
-		updateStatusBarItem();
-	});
+	}
+	updateStatusBarItem();
 }
 
 async function isRunning (query : string) : Promise<boolean> {
@@ -200,7 +227,7 @@ async function isRunning (query : string) : Promise<boolean> {
 	let cmd = "";
 	switch(platform) {
 		case "win32" : cmd = "tasklist"; break;
-		case "darwin" : cmd = "ps -ax | grep -v grep | grep " + query; break;
+		case "darwin" : cmd = "ps -ax"; break;
 		case "linux" : cmd = "ps -A"; break;
 		default: break;
 	}

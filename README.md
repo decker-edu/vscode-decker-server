@@ -29,6 +29,6 @@ The webview advice about installing a decker server is functional but looks ugly
 
 ## Release Notes
 
-### 0.0.6
+### 0.0.7
 
 Initial release.
