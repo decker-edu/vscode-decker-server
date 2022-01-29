@@ -2,11 +2,11 @@
   "name": "decker-server",
   "displayName": "Decker Server",
   "description": "Automatically starts a decker server upon opening a decker workspace and offers commands to start and stop the server as well as logging utilities.",
-  "version": "0.0.7",
+  "version": "0.0.8",
   "publisher": "decker-edu",
   "repository": {
     "type": "git",
-    "url": "https://github.com/salbeira/vscode-decker-server"
+    "url": "https://github.com/decker-edu/vscode-decker-server"
   },
   "engines": {
     "vscode": "^1.62.0"
@@ -22,10 +22,15 @@
     "configuration": {
       "title": "Decker Server",
       "properties": {
-        "decker.server.autostart" : {
+        "decker.server.autostart": {
           "type": "boolean",
           "default": "true",
           "description": "Start the Decker Server automatically in the background when opening a decker workspace?"
+        },
+        "decker.server.port": {
+          "type": "number",
+          "default": "8888",
+          "description": "The default port that decker should be started on. Will move up in value if port is already in use."
         },
         "decker.executable.command": {
           "type": "string",
