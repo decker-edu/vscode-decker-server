@@ -11,8 +11,6 @@ let deckerPort : number;
 
 let statusBarItem: vscode.StatusBarItem;
 
-let deckerCommand : string;
-
 let logChannel = vscode.window.createOutputChannel("Decker Server: log");
 let stdoutChannel = vscode.window.createOutputChannel("Decker Server: stdout");
 let stderrChannel = vscode.window.createOutputChannel("Decker Server: stderr");
@@ -23,13 +21,9 @@ export function activate(context: vscode.ExtensionContext) {
 	extensionPath = context.extensionPath;
 
 	let config = vscode.workspace.getConfiguration('decker');
-	let deckerCommandConfig : string | undefined = config.get("executable.command");
-	let configPort : number | undefined = config.get("server.port");
-	deckerCommand = deckerCommandConfig ? deckerCommandConfig : "decker";
-	deckerPort = configPort ? configPort : 8888;
 
 	vscode.commands.registerCommand("decker-server.start", () => {
-		startDeckerServer(deckerPort);
+		startDeckerServer();
 	});
 	vscode.commands.registerCommand("decker-server.stop", () => {
 		stopDeckerServer();
@@ -38,26 +32,26 @@ export function activate(context: vscode.ExtensionContext) {
 		if(deckerProcess) {
 			stopDeckerServer();
 		} else {
-			startDeckerServer(deckerPort);
+			startDeckerServer();
 		}
 	});
 	vscode.commands.registerCommand("decker-server.open-browser", () => {
-		openBrowser(deckerPort);
+		openBrowser();
 	});
 
 	vscode.commands.registerCommand("decker-server.open-preview", () => {
-		openPreview(deckerPort);
+		openPreview();
 	});
 
 	createStatusBarItem(context);
 	updateStatusBarItem();
 
 	if(config.get("server.autostart")) {
-		startDeckerServer(deckerPort);
+		startDeckerServer();
 	}
 }
 
-function makePreviewHTML(port : number, htmlPath : string, cssPath : string) : string {
+function makePreviewHTML(htmlPath : string, cssPath : string) : string {
 	return String.raw
 `<!DOCTYPE html>
 <html lang="en">
@@ -68,7 +62,7 @@ function makePreviewHTML(port : number, htmlPath : string, cssPath : string) : s
 	<title>Decker Preview</title>
 </head>
 <body>
-	<iframe src="http://localhost:${port}/${htmlPath}"></iframe> 
+	<iframe src="http://localhost:${deckerPort}/${htmlPath}"></iframe> 
 </body>
 </html>`;
 }
@@ -90,22 +84,22 @@ function makeErrorHTML(message : string, cssPath : string) : string {
 </html>`;
 }
 
-async function openPreview(port : number) {
+async function openPreview() {
 	const editor = vscode.window.activeTextEditor;
 	const panel : vscode.WebviewPanel = vscode.window.createWebviewPanel("previewPanel", "Decker Preview", vscode.ViewColumn.Two, {enableScripts: true});
 	const cssURI : vscode.Uri = vscode.Uri.file(path.join(extensionPath, "res", "webview.css"));
 	const webviewURI : vscode.Uri = panel.webview.asWebviewUri(cssURI);
 	if(!deckerProcess) {
-		await startDeckerServer(port);
+		await startDeckerServer();
 		if(!deckerProcess) {
 			panel.webview.html = makeErrorHTML("Unable to start a decker server in the workbench directory.", webviewURI.toString());
 			return;
 		}
 	}
-	if(editor) {
+	if(!!editor) {
 		const htmlPath : string | undefined = getDocumentHTMLPath(editor.document);
-		if(htmlPath) {
-			panel.webview.html = makePreviewHTML(port, htmlPath, webviewURI.toString());
+		if(!!htmlPath) {
+			panel.webview.html = makePreviewHTML(htmlPath, webviewURI.toString());
 		} else {
 			panel.webview.html = makeErrorHTML("Preview was not opened in a markdown file.", webviewURI.toString());
 		}
@@ -128,23 +122,23 @@ function getDocumentHTMLPath(document : vscode.TextDocument) : string | undefine
 	return undefined;
 }
 
-async function openBrowser(port : number) {
+async function openBrowser() {
 	const editor = vscode.window.activeTextEditor;
 	if(!editor) {
 		vscode.window.showErrorMessage("No active document.");
 		return;
 	}
 	if(!deckerProcess) {
-		await startDeckerServer(port);
+		await startDeckerServer();
 		if(!deckerProcess) {
 			return;
 		}
 	}
 	let path = getDocumentHTMLPath(editor.document);
 	if(path) {
-		open(`http://localhost:${port}/${path}`);
+		open(`http://localhost:${deckerPort}/${path}`);
 	} else {
-		open(`http://localhost:${port}`);
+		open(`http://localhost:${deckerPort}`);
 	}
 }
 
@@ -169,8 +163,24 @@ async function updateStatusBarItem() {
 	}
 }
 
-async function startDeckerServer(port : number) {
-	const installed : boolean = await checkedInstalled(deckerCommand);
+function getDeckerCommand(fallback : string) : string {
+	let config = vscode.workspace.getConfiguration('decker');
+	let configCommand : string | undefined = config.get("executable.command");
+	let deckerCommand = configCommand ? configCommand : fallback;
+	return deckerCommand;
+}
+
+function getDeckerPort(fallback : number) : number {
+	let config = vscode.workspace.getConfiguration('decker');
+	let configPort : number | undefined = config.get("server.port");
+	let deckerPort = configPort ? configPort : fallback;
+	return deckerPort;
+}
+
+async function startDeckerServer() {
+	let command = getDeckerCommand("decker");
+	let port = getDeckerPort(8888);
+	const installed : boolean = await checkedInstalled(command);
 	if (!installed) {
 		showInstallWebview();
 		updateStatusBarItem();
@@ -192,12 +202,12 @@ async function startDeckerServer(port : number) {
 			occupied = await portOccupied(port);
 		}
 		deckerPort = port;
-		deckerProcess = spawn(deckerCommand, ["--server", "-p", `${port}`], { cwd: workspaceDirecotry, env: process.env });
+		deckerProcess = spawn(command, ["--server", "-p", `${port}`], { cwd: workspaceDirecotry, env: process.env });
 		deckerProcess.stdout.on("data", (data) => {
-			stdoutChannel.appendLine(data.toString());
+			stdoutChannel.append(data.toString());
 		});
 		deckerProcess.stderr.on("data", (data) => {
-			stderrChannel.appendLine(data.toString());
+			stderrChannel.append(data.toString());
 		});
 		deckerProcess.on("exit", (code) => {
 			vscode.window.showInformationMessage("Decker Server terminated.");
@@ -210,7 +220,7 @@ async function startDeckerServer(port : number) {
 		deckerProcess.on("error", (error) => {
 			logChannel.appendLine(`[DECKER ERROR] ${error.message}`);
 		});
-		vscode.window.showInformationMessage(`Started Decker Server in: ${workspaceDirecotry} using Port: ${port}`);
+		vscode.window.showInformationMessage(`Started Decker Server in: ${workspaceDirecotry}:${port}`);
 		updateStatusBarItem();
 	}
 }
@@ -225,22 +235,22 @@ async function stopDeckerServer() {
 
 async function portOccupied(port : number) : Promise<boolean> {
 	const platform = process.platform;
-	let cmd = "";
-	let arg = "";
+	let cmd  : string   = "";
+	let args : string[] = [];
 	/* Both the Powershell Command and lsof have the same behaviour: If no process uses the requested
-	 * Port they exit with exit code 1, if they find something they print it out and exit with code 0. */
+	 * port they exit with exit code 1, if they find something they print it out and exit with code 0. */
 	switch(platform) {
 		case "win32" : //Use Windows Powershell
 			cmd = "powershell.exe";
-			arg = `Get-NetTCPConnection -LocalPort ${port}`;
+			args = [`Get-NetTCPConnection -LocalPort ${port}`];
 			break;
 		default: //Use lsof
 			cmd = "lsof";
-			arg = `-i:${port} -P -n`;
+			args = [`-i:${port}`, "-P", "-n"];
 			break;
 	}
 	return new Promise<boolean>((resolve, reject) => {
-		let child = spawn(cmd, [arg]);
+		let child = spawn(cmd, args);
 		child.stdout.on("data", function(data : any) {
 //					stdoutChannel.appendLine(data.toString());
 		});
@@ -268,7 +278,7 @@ async function checkedInstalled(program : string): Promise<boolean> {
 	});
 }
 
-function getStorageDirectory(context: vscode.ExtensionContext){
+function getStorageDirectory(context: vscode.ExtensionContext) : string {
 	let storage: string | undefined = vscode.workspace.getConfiguration('decker').get('storagePath');
 	if(!storage) {
 		storage = context.globalStorageUri.fsPath;

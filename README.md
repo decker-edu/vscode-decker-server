@@ -22,12 +22,17 @@ This extension contributes the following settings:
 
 * `decker.executable.command`: Configure the path or command used to start a decker server.
 * `decker.server.autostart`: Configure whether to automatically start a decker server in your workspace.
+* `decker.server.port`: Configure the default port from which to start looking for a free port.
 
 ## Known Issues
 
 The webview advice about installing a decker server is functional but looks ugly.
 
 ## Release Notes
+
+### 0.0.8 / 0.0.9
+
+Multiple decker servers can now be started across multiple VSCode Windows.
 
 ### 0.0.7
 
