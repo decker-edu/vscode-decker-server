@@ -1,0 +1,16 @@
+{
+    "extension.decker-server.description": "Automatically starts a decker server upon opening a decker workspace and offers commands to start and stop the server as well as logging utilities.",
+    "extension.decker-server.config.autostart": "Start the Decker Server automatically in the background when opening a decker workspace?",
+    "extension.decker-server.config.port": "The default port that decker should be started on. Will move up in value if port is already in use.",
+    "extension.decker-server.config.command": "The path or command to execute decker. If installed and on your PATH, 'decker' should suffice but if you want to use another executable change this value.",
+    "extension.decker-server.context-submenu.label": "Decker ...",
+    "extension.decker-server.start.title": "Start Decker Server",
+    "extension.decker-server.stop.title": "Stop Decker Server",
+    "extension.decker-server.toggle.title": "Toggle Decker Server",
+    "extension.decker-server.build.title": "Build project",
+	"extension.decker-server.clean.title": "Clean directory",
+	"extension.decker-server.crunch.title": "Compress videos",
+    "extension.decker-server.publish.title": "Publish to remote server",
+    "extension.decker-server.open-preview.title": "Decker: open slides in preview-panel",
+    "extension.decker-server.open-browser.title": "Decker: open slides in browser"
+}
