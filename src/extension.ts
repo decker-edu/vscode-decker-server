@@ -408,7 +408,7 @@ async function startDeckerServer() {
       occupied = await portOccupied(port);
     }
     deckerPort = port;
-    deckerProcess = spawn(command, ["--server", "-p", `${port}`], {
+    deckerProcess = spawn(command, ["--server", "-p", `${port}`, "-e"], {
       cwd: workspaceDirecotry,
       env: process.env,
     });
@@ -416,8 +416,12 @@ async function startDeckerServer() {
       stdoutChannel.append(data.toString());
     });
     deckerProcess.stderr.on("data", (data) => {
-      stderrChannel.append(data.toString());
-      vscode.window.showInformationMessage("Decker just reported an error.");
+      const message = data.toString();
+      stderrChannel.append(message);
+      const answer = vscode.window.showErrorMessage(
+        "Decker just reported an error.",
+        "Show Details"
+      );
     });
     deckerProcess.on("exit", (code) => {
       vscode.window.showInformationMessage("Decker Server terminated.");
