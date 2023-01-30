@@ -4,10 +4,9 @@ import * as vscode from "vscode";
 import * as open from "open";
 import * as os from "os";
 import * as path from "path";
+import * as exists from "command-exists";
 
 const localize = nls.config({ messageFormat: nls.MessageFormat.file })();
-
-const exists = require("command-exists");
 
 let deckerProcess: ChildProcessWithoutNullStreams | null = null;
 let deckerPort: number;
@@ -121,7 +120,9 @@ async function openPreview() {
     path.join(extensionPath, "res", "webview.css")
   );
   const webviewURI: vscode.Uri = panel.webview.asWebviewUri(cssURI);
+  panel.webview.html = pleaseWaitHTML;
   if (!deckerProcess) {
+    await buildProject();
     await startDeckerServer();
     if (!deckerProcess) {
       panel.webview.html = makeErrorHTML(
@@ -146,6 +147,18 @@ async function openPreview() {
       "No active document.",
       webviewURI.toString()
     );
+  }
+}
+
+async function displayErrorMessage(message: string) {
+  const answer = await vscode.window.showErrorMessage(
+    "Decker just reported an error.",
+    "Show Details"
+  );
+  if (answer === "Show Details") {
+    vscode.window.showInformationMessage(message, {
+      modal: true,
+    });
   }
 }
 
@@ -242,7 +255,7 @@ async function cleanProject() {
     return;
   }
   const workspaceDirecotry = workspaceFolders[0].uri.fsPath;
-  const localProcess = spawn(command, ["clean"], {
+  const localProcess = spawn(command, ["clean", "-e"], {
     cwd: workspaceDirecotry,
     env: process.env,
   });
@@ -250,7 +263,9 @@ async function cleanProject() {
     stdoutChannel.append(data.toString());
   });
   localProcess.stderr.on("data", (data) => {
-    stderrChannel.append(data.toString());
+    const message = data.toString();
+    stderrChannel.append(message);
+    displayErrorMessage(message);
   });
   localProcess.on("exit", (code) => {
     vscode.window.showInformationMessage("Finished cleaning project.");
@@ -266,40 +281,46 @@ async function cleanProject() {
 }
 
 async function buildProject() {
-  let command = getDeckerCommand("decker");
-  const installed: boolean = await checkedInstalled(command);
-  if (!installed) {
-    showInstallWebview();
-    return;
-  }
-  const workspaceFolders = vscode.workspace.workspaceFolders;
-  if (!workspaceFolders) {
-    vscode.window.showErrorMessage(
-      "No workspace is open to run a decker command in."
-    );
-    return;
-  }
-  const workspaceDirecotry = workspaceFolders[0].uri.fsPath;
-  const localProcess = spawn(command, [], {
-    cwd: workspaceDirecotry,
-    env: process.env,
-  });
-  localProcess.stdout.on("data", (data) => {
-    stdoutChannel.append(data.toString());
-  });
-  localProcess.stderr.on("data", (data) => {
-    stderrChannel.append(data.toString());
-  });
-  localProcess.on("exit", (code) => {
-    vscode.window.showInformationMessage("Finished building project.");
-    if (code) {
-      logChannel.appendLine(`[DECKER EXIT] decker build exitcode: ${code}`);
-    } else {
-      logChannel.appendLine(`[DECKER EXIT] decker build`);
+  return new Promise<void>(async (resolve, reject) => {
+    let command = getDeckerCommand("decker");
+    const installed: boolean = await checkedInstalled(command);
+    if (!installed) {
+      showInstallWebview();
+      return resolve();
     }
-  });
-  localProcess.on("error", (error) => {
-    logChannel.appendLine(`[DECKER ERROR] ${error.message}`);
+    const workspaceFolders = vscode.workspace.workspaceFolders;
+    if (!workspaceFolders) {
+      vscode.window.showErrorMessage(
+        "No workspace is open to run a decker command in."
+      );
+      return resolve();
+    }
+    const workspaceDirecotry = workspaceFolders[0].uri.fsPath;
+    const localProcess = spawn(command, ["-e"], {
+      cwd: workspaceDirecotry,
+      env: process.env,
+    });
+    localProcess.stdout.on("data", (data) => {
+      stdoutChannel.append(data.toString());
+    });
+    localProcess.stderr.on("data", (data) => {
+      const message = data.toString();
+      stderrChannel.append(message);
+      displayErrorMessage(message);
+    });
+    localProcess.on("exit", (code) => {
+      vscode.window.showInformationMessage("Finished building project.");
+      if (code) {
+        logChannel.appendLine(`[DECKER EXIT] decker build exitcode: ${code}`);
+      } else {
+        logChannel.appendLine(`[DECKER EXIT] decker build`);
+      }
+      resolve();
+    });
+    localProcess.on("error", (error) => {
+      logChannel.appendLine(`[DECKER ERROR] ${error.message}`);
+      reject(error);
+    });
   });
 }
 
@@ -318,7 +339,7 @@ async function publishProject() {
     return;
   }
   const workspaceDirecotry = workspaceFolders[0].uri.fsPath;
-  const localProcess = spawn(command, ["publish"], {
+  const localProcess = spawn(command, ["publish", "-e"], {
     cwd: workspaceDirecotry,
     env: process.env,
   });
@@ -326,7 +347,9 @@ async function publishProject() {
     stdoutChannel.append(data.toString());
   });
   localProcess.stderr.on("data", (data) => {
-    stderrChannel.append(data.toString());
+    const message = data.toString();
+    stderrChannel.append(message);
+    displayErrorMessage(message);
   });
   localProcess.on("exit", (code) => {
     vscode.window.showInformationMessage("Finished publishing project.");
@@ -356,7 +379,7 @@ async function crunchVideos() {
     return;
   }
   const workspaceDirecotry = workspaceFolders[0].uri.fsPath;
-  const localProcess = spawn(command, ["crunch"], {
+  const localProcess = spawn(command, ["crunch", "-e"], {
     cwd: workspaceDirecotry,
     env: process.env,
   });
@@ -415,13 +438,10 @@ async function startDeckerServer() {
     deckerProcess.stdout.on("data", (data) => {
       stdoutChannel.append(data.toString());
     });
-    deckerProcess.stderr.on("data", (data) => {
+    deckerProcess.stderr.on("data", async (data) => {
       const message = data.toString();
       stderrChannel.append(message);
-      const answer = vscode.window.showErrorMessage(
-        "Decker just reported an error.",
-        "Show Details"
-      );
+      displayErrorMessage(message);
     });
     deckerProcess.on("exit", (code) => {
       vscode.window.showInformationMessage("Decker Server terminated.");
@@ -538,6 +558,19 @@ function getCurrentDeckerVersion(): string {
 export function deactivate() {
   stopDeckerServer();
 }
+
+const pleaseWaitHTML: string = String.raw`<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Please Wait</title>
+</head>
+<body>
+    <h1>Decker is building your project</h1>
+	<p>Please wait until the server is ready.</p>
+</body>
+</html>`;
 
 const configHTML: string = String.raw`<!DOCTYPE html>
 <html lang="en">

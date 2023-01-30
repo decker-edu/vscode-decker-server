@@ -2,7 +2,7 @@
   "name": "decker-server",
   "displayName": "Decker Server",
   "description": "Automatically starts a decker server upon opening a decker workspace and offers commands to start and stop the server as well as logging utilities.",
-  "version": "0.0.13",
+  "version": "0.1.1",
   "publisher": "decker-edu",
   "repository": {
     "type": "git",
@@ -24,7 +24,7 @@
     "onCommand:decker-server.clean",
     "onCommand:decker-server.toggle",
     "onCommand:decker-server.open-browser",
-    "onCommand:decker-server.open-preview"    
+    "onCommand:decker-server.open-preview"
   ],
   "main": "./dist/extension.js",
   "contributes": {
@@ -73,6 +73,11 @@
         },
         {
           "command": "decker-server.clean",
+          "group": "decker/server",
+          "when": "explorerResourceIsFolder"
+        },
+        {
+          "command": "decker-server.start",
           "group": "decker/server",
           "when": "explorerResourceIsFolder"
         }
@@ -167,6 +172,7 @@
     "test": "node ./out/test/runTest.js"
   },
   "devDependencies": {
+    "@types/command-exists": "^1.2.0",
     "@types/glob": "^8.0.0",
     "@types/mocha": "^9.1.1",
     "@types/node": "18.x",

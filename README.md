@@ -30,6 +30,10 @@ The webview advice about installing a decker server is functional but looks ugly
 
 ## Release Notes
 
+### 0.1.1
+
+Improved UX and fixed some long standing bugs with the server status icon not updating correctly. Also improved error reporting.
+
 ### 0.0.8 / 0.0.9
 
 Multiple decker servers can now be started across multiple VSCode Windows.
