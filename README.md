@@ -30,6 +30,18 @@ The webview advice about installing a decker server is functional but looks ugly
 
 ## Release Notes
 
+### 0.1.4
+
+Suppress error message that starts with WARNING
+
+### 0.1.3
+
+Added all decker targets to the context menu.
+
+### 0.1.2
+
+Added `decker pdf` as a context menu option.
+
 ### 0.1.1
 
 Improved UX and fixed some long standing bugs with the server status icon not updating correctly. Also improved error reporting.

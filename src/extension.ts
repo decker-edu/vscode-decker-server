@@ -1,13 +1,11 @@
 import { ChildProcessWithoutNullStreams, exec, spawn } from "child_process";
-import * as nls from "vscode-nls";
 import * as vscode from "vscode";
 import * as open from "open";
 import * as os from "os";
 import * as path from "path";
 import * as exists from "command-exists";
 
-const localize = nls.config({ messageFormat: nls.MessageFormat.file })();
-
+let spawnState: string | null = null;
 let deckerProcess: ChildProcessWithoutNullStreams | null = null;
 let deckerPort: number;
 
@@ -27,16 +25,27 @@ export function activate(context: vscode.ExtensionContext) {
   vscode.commands.registerCommand("decker-server.start", () => {
     startDeckerServer();
   });
+
   vscode.commands.registerCommand("decker-server.stop", () => {
     stopDeckerServer();
   });
-  vscode.commands.registerCommand("decker-server.toggle", () => {
+
+  vscode.commands.registerCommand("decker-server.toggle", async () => {
+    if (spawnState === "wait") {
+      return;
+    }
     if (deckerProcess) {
       stopDeckerServer();
     } else {
+      updateStatusBarItem("wait");
       startDeckerServer();
     }
   });
+
+  vscode.commands.registerCommand("decker-server.pdf", () => {
+    runDeckerPDF();
+  });
+
   vscode.commands.registerCommand("decker-server.open-browser", () => {
     openBrowser();
   });
@@ -44,24 +53,70 @@ export function activate(context: vscode.ExtensionContext) {
   vscode.commands.registerCommand("decker-server.open-preview", () => {
     openPreview();
   });
+
   vscode.commands.registerCommand(
     "decker-server.crunch",
     (directory: vscode.Uri) => {
       crunchVideos();
     }
   );
+
   vscode.commands.registerCommand(
     "decker-server.clean",
     (directory: vscode.Uri) => {
       cleanProject();
     }
   );
+
+  vscode.commands.registerCommand(
+    "decker-server.purge",
+    (directory: vscode.Uri) => {
+      purgeProject();
+    }
+  );
+
   vscode.commands.registerCommand(
     "decker-server.build",
     (directory: vscode.Uri) => {
       buildProject();
     }
   );
+
+  vscode.commands.registerCommand(
+    "decker-server.html",
+    (directory: vscode.Uri) => {
+      buildHTML();
+    }
+  );
+
+  vscode.commands.registerCommand(
+    "decker-server.decks",
+    (directory: vscode.Uri) => {
+      buildDecks();
+    }
+  );
+
+  vscode.commands.registerCommand(
+    "decker-server.pages",
+    (directory: vscode.Uri) => {
+      buildPages();
+    }
+  );
+
+  vscode.commands.registerCommand(
+    "decker-server.handouts",
+    (directory: vscode.Uri) => {
+      buildHandouts();
+    }
+  );
+
+  vscode.commands.registerCommand(
+    "decker-server.search-index",
+    (directory: vscode.Uri) => {
+      buildSearchIndex();
+    }
+  );
+
   vscode.commands.registerCommand(
     "decker-server.publish",
     (directory: vscode.Uri) => {
@@ -112,7 +167,7 @@ async function openPreview() {
   const editor = vscode.window.activeTextEditor;
   const panel: vscode.WebviewPanel = vscode.window.createWebviewPanel(
     "previewPanel",
-    "Decker Preview",
+    vscode.l10n.t("Decker Preview"),
     vscode.ViewColumn.Two,
     { enableScripts: true }
   );
@@ -126,7 +181,9 @@ async function openPreview() {
     await startDeckerServer();
     if (!deckerProcess) {
       panel.webview.html = makeErrorHTML(
-        "Unable to start a decker server in the workbench directory.",
+        vscode.l10n.t(
+          "Unable to start a decker server in the workbench directory."
+        ),
         webviewURI.toString()
       );
       return;
@@ -138,24 +195,27 @@ async function openPreview() {
       panel.webview.html = makePreviewHTML(htmlPath, webviewURI.toString());
     } else {
       panel.webview.html = makeErrorHTML(
-        "Preview was not opened in a markdown file.",
+        vscode.l10n.t("Preview was not opened in a markdown file."),
         webviewURI.toString()
       );
     }
   } else {
     panel.webview.html = makeErrorHTML(
-      "No active document.",
+      vscode.l10n.t("No active document."),
       webviewURI.toString()
     );
   }
 }
 
 async function displayErrorMessage(message: string) {
+  if (message.startsWith("[WARNING]")) {
+    return;
+  }
   const answer = await vscode.window.showErrorMessage(
-    "Decker just reported an error.",
-    "Show Details"
+    vscode.l10n.t("Decker just reported an error."),
+    vscode.l10n.t("Show Details")
   );
-  if (answer === "Show Details") {
+  if (answer === vscode.l10n.t("Show Details")) {
     vscode.window.showInformationMessage(message, {
       modal: true,
     });
@@ -213,16 +273,24 @@ function createStatusBarItem(context: vscode.ExtensionContext) {
     1
   );
   statusBarItem.command = "decker-server.toggle";
-  statusBarItem.text = "$(warning) Decker Server Offline";
+  statusBarItem.text =
+    "$(info) No Decker Server running in this session. Click here to start.";
   statusBarItem.show();
   context.subscriptions.push(statusBarItem);
 }
 
-async function updateStatusBarItem() {
-  if (!!deckerProcess) {
-    statusBarItem.text = `$(play) Decker Server on http://localhost:${deckerPort}`;
+async function updateStatusBarItem(state: string | undefined = undefined) {
+  if (state && state === "wait") {
+    spawnState = "wait";
+    statusBarItem.text =
+      "$(warning) Please wait! Your project is being processed ...";
+  } else if (!!deckerProcess) {
+    spawnState = "spawned";
+    statusBarItem.text = `$(play) Decker Server reachable at http://localhost:${deckerPort}. Click to stop.`;
   } else {
-    statusBarItem.text = "$(warning) No Decker Server running in this session";
+    spawnState = null;
+    statusBarItem.text =
+      "$(info) No Decker Server running in this session. Click to start.";
   }
 }
 
@@ -280,6 +348,46 @@ async function cleanProject() {
   });
 }
 
+async function purgeProject() {
+  let command = getDeckerCommand("decker");
+  const installed: boolean = await checkedInstalled(command);
+  if (!installed) {
+    showInstallWebview();
+    return;
+  }
+  const workspaceFolders = vscode.workspace.workspaceFolders;
+  if (!workspaceFolders) {
+    vscode.window.showErrorMessage(
+      "No workspace is open to clean a project in."
+    );
+    return;
+  }
+  const workspaceDirecotry = workspaceFolders[0].uri.fsPath;
+  const localProcess = spawn(command, ["purge", "-e"], {
+    cwd: workspaceDirecotry,
+    env: process.env,
+  });
+  localProcess.stdout.on("data", (data) => {
+    stdoutChannel.append(data.toString());
+  });
+  localProcess.stderr.on("data", (data) => {
+    const message = data.toString();
+    stderrChannel.append(message);
+    displayErrorMessage(message);
+  });
+  localProcess.on("exit", (code) => {
+    vscode.window.showInformationMessage("Finished purging project.");
+    if (code) {
+      logChannel.appendLine(`[DECKER EXIT] decker purge exitcode: ${code}`);
+    } else {
+      logChannel.appendLine(`[DECKER EXIT] decker purge`);
+    }
+  });
+  localProcess.on("error", (error) => {
+    logChannel.appendLine(`[DECKER ERROR] ${error.message}`);
+  });
+}
+
 async function buildProject() {
   return new Promise<void>(async (resolve, reject) => {
     let command = getDeckerCommand("decker");
@@ -311,9 +419,53 @@ async function buildProject() {
     localProcess.on("exit", (code) => {
       vscode.window.showInformationMessage("Finished building project.");
       if (code) {
-        logChannel.appendLine(`[DECKER EXIT] decker build exitcode: ${code}`);
+        logChannel.appendLine(`[DECKER EXIT] decker exitcode: ${code}`);
       } else {
         logChannel.appendLine(`[DECKER EXIT] decker build`);
+      }
+      resolve();
+    });
+    localProcess.on("error", (error) => {
+      logChannel.appendLine(`[DECKER ERROR] ${error.message}`);
+      reject(error);
+    });
+  });
+}
+
+async function buildHTML() {
+  return new Promise<void>(async (resolve, reject) => {
+    let command = getDeckerCommand("decker");
+    const installed: boolean = await checkedInstalled(command);
+    if (!installed) {
+      showInstallWebview();
+      return resolve();
+    }
+    const workspaceFolders = vscode.workspace.workspaceFolders;
+    if (!workspaceFolders) {
+      vscode.window.showErrorMessage(
+        "No workspace is open to run a decker command in."
+      );
+      return resolve();
+    }
+    const workspaceDirecotry = workspaceFolders[0].uri.fsPath;
+    const localProcess = spawn(command, ["html", "-e"], {
+      cwd: workspaceDirecotry,
+      env: process.env,
+    });
+    localProcess.stdout.on("data", (data) => {
+      stdoutChannel.append(data.toString());
+    });
+    localProcess.stderr.on("data", (data) => {
+      const message = data.toString();
+      stderrChannel.append(message);
+      displayErrorMessage(message);
+    });
+    localProcess.on("exit", (code) => {
+      vscode.window.showInformationMessage("Finished building html.");
+      if (code) {
+        logChannel.appendLine(`[DECKER EXIT] decker html exitcode: ${code}`);
+      } else {
+        logChannel.appendLine(`[DECKER EXIT] decker html`);
       }
       resolve();
     });
@@ -395,6 +547,162 @@ async function crunchVideos() {
       logChannel.appendLine(`[DECKER EXIT] decker crunch exitcode: ${code}`);
     } else {
       logChannel.appendLine(`[DECKER EXIT] decker crunch`);
+    }
+  });
+  localProcess.on("error", (error) => {
+    logChannel.appendLine(`[DECKER ERROR] ${error.message}`);
+  });
+}
+
+async function buildDecks() {
+  let command = getDeckerCommand("decker");
+  const installed: boolean = await checkedInstalled(command);
+  if (!installed) {
+    showInstallWebview();
+    return;
+  }
+  const workspaceFolders = vscode.workspace.workspaceFolders;
+  if (!workspaceFolders) {
+    vscode.window.showErrorMessage(
+      "No workspace is open to run a decker command in."
+    );
+    return;
+  }
+  const workspaceDirecotry = workspaceFolders[0].uri.fsPath;
+  const localProcess = spawn(command, ["decks", "-e"], {
+    cwd: workspaceDirecotry,
+    env: process.env,
+  });
+  localProcess.stdout.on("data", (data) => {
+    stdoutChannel.append(data.toString());
+  });
+  localProcess.stderr.on("data", (data) => {
+    stderrChannel.append(data.toString());
+  });
+  localProcess.on("exit", (code) => {
+    vscode.window.showInformationMessage("Finished building decks.");
+    if (code) {
+      logChannel.appendLine(`[DECKER EXIT] decker decks exitcode: ${code}`);
+    } else {
+      logChannel.appendLine(`[DECKER EXIT] decker decks`);
+    }
+  });
+  localProcess.on("error", (error) => {
+    logChannel.appendLine(`[DECKER ERROR] ${error.message}`);
+  });
+}
+
+async function buildHandouts() {
+  let command = getDeckerCommand("decker");
+  const installed: boolean = await checkedInstalled(command);
+  if (!installed) {
+    showInstallWebview();
+    return;
+  }
+  const workspaceFolders = vscode.workspace.workspaceFolders;
+  if (!workspaceFolders) {
+    vscode.window.showErrorMessage(
+      "No workspace is open to run a decker command in."
+    );
+    return;
+  }
+  const workspaceDirecotry = workspaceFolders[0].uri.fsPath;
+  const localProcess = spawn(command, ["handouts", "-e"], {
+    cwd: workspaceDirecotry,
+    env: process.env,
+  });
+  localProcess.stdout.on("data", (data) => {
+    stdoutChannel.append(data.toString());
+  });
+  localProcess.stderr.on("data", (data) => {
+    stderrChannel.append(data.toString());
+  });
+  localProcess.on("exit", (code) => {
+    vscode.window.showInformationMessage("Finished building handouts.");
+    if (code) {
+      logChannel.appendLine(`[DECKER EXIT] decker handouts exitcode: ${code}`);
+    } else {
+      logChannel.appendLine(`[DECKER EXIT] decker handouts`);
+    }
+  });
+  localProcess.on("error", (error) => {
+    logChannel.appendLine(`[DECKER ERROR] ${error.message}`);
+  });
+}
+
+async function buildPages() {
+  let command = getDeckerCommand("decker");
+  const installed: boolean = await checkedInstalled(command);
+  if (!installed) {
+    showInstallWebview();
+    return;
+  }
+  const workspaceFolders = vscode.workspace.workspaceFolders;
+  if (!workspaceFolders) {
+    vscode.window.showErrorMessage(
+      "No workspace is open to run a decker command in."
+    );
+    return;
+  }
+  const workspaceDirecotry = workspaceFolders[0].uri.fsPath;
+  const localProcess = spawn(command, ["pages", "-e"], {
+    cwd: workspaceDirecotry,
+    env: process.env,
+  });
+  localProcess.stdout.on("data", (data) => {
+    stdoutChannel.append(data.toString());
+  });
+  localProcess.stderr.on("data", (data) => {
+    stderrChannel.append(data.toString());
+  });
+  localProcess.on("exit", (code) => {
+    vscode.window.showInformationMessage("Finished building pages.");
+    if (code) {
+      logChannel.appendLine(`[DECKER EXIT] decker pages exitcode: ${code}`);
+    } else {
+      logChannel.appendLine(`[DECKER EXIT] decker pages`);
+    }
+  });
+  localProcess.on("error", (error) => {
+    logChannel.appendLine(`[DECKER ERROR] ${error.message}`);
+  });
+}
+
+async function buildSearchIndex() {
+  let command = getDeckerCommand("decker");
+  const installed: boolean = await checkedInstalled(command);
+  if (!installed) {
+    showInstallWebview();
+    return;
+  }
+  const workspaceFolders = vscode.workspace.workspaceFolders;
+  if (!workspaceFolders) {
+    vscode.window.showErrorMessage(
+      "No workspace is open to clean a project in."
+    );
+    return;
+  }
+  const workspaceDirecotry = workspaceFolders[0].uri.fsPath;
+  const localProcess = spawn(command, ["search-index", "-e"], {
+    cwd: workspaceDirecotry,
+    env: process.env,
+  });
+  localProcess.stdout.on("data", (data) => {
+    stdoutChannel.append(data.toString());
+  });
+  localProcess.stderr.on("data", (data) => {
+    const message = data.toString();
+    stderrChannel.append(message);
+    displayErrorMessage(message);
+  });
+  localProcess.on("exit", (code) => {
+    vscode.window.showInformationMessage("Finished building search-index.");
+    if (code) {
+      logChannel.appendLine(
+        `[DECKER EXIT] decker search-index exitcode: ${code}`
+      );
+    } else {
+      logChannel.appendLine(`[DECKER EXIT] decker search-index`);
     }
   });
   localProcess.on("error", (error) => {
@@ -548,6 +856,51 @@ function getStorageDirectory(context: vscode.ExtensionContext): string {
     }
   }
   return storage;
+}
+
+async function runDeckerPDF() {
+  const platform = process.platform;
+  if (platform === "win32") {
+    vscode.window.showErrorMessage("This feature is not available on Windows.");
+    return;
+  }
+  let command = getDeckerCommand("decker");
+  const installed: boolean = await checkedInstalled(command);
+  if (!installed) {
+    showInstallWebview();
+    return;
+  }
+  const workspaceFolders = vscode.workspace.workspaceFolders;
+  if (!workspaceFolders) {
+    vscode.window.showErrorMessage(
+      "No workspace is open to run a decker command in."
+    );
+    return;
+  }
+  const workspaceDirecotry = workspaceFolders[0].uri.fsPath;
+  const localProcess = spawn(command, ["pdf", "-j1"], {
+    cwd: workspaceDirecotry,
+    env: process.env,
+  });
+  localProcess.stdout.on("data", (data) => {
+    stdoutChannel.append(data.toString());
+  });
+  localProcess.stderr.on("data", (data) => {
+    const message = data.toString();
+    stderrChannel.append(message);
+    displayErrorMessage(message);
+  });
+  localProcess.on("exit", (code) => {
+    vscode.window.showInformationMessage("Finished exporting pdfs.");
+    if (code) {
+      logChannel.appendLine(`[DECKER EXIT] decker pdf exitcode: ${code}`);
+    } else {
+      logChannel.appendLine(`[DECKER EXIT] decker pdf`);
+    }
+  });
+  localProcess.on("error", (error) => {
+    logChannel.appendLine(`[DECKER ERROR] ${error.message}`);
+  });
 }
 
 //TODO Get this from github once migration is done
