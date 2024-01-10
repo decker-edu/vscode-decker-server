@@ -282,15 +282,13 @@ function createStatusBarItem(context: vscode.ExtensionContext) {
 async function updateStatusBarItem(state: string | undefined = undefined) {
   if (state && state === "wait") {
     spawnState = "wait";
-    statusBarItem.text =
-      "$(warning) Please wait! Your project is being processed ...";
+    statusBarItem.text = "$(warning) Decker-Webserver: Starting ...";
   } else if (!!deckerProcess) {
     spawnState = "spawned";
-    statusBarItem.text = `$(play) Decker Server reachable at http://localhost:${deckerPort}. Click to stop.`;
+    statusBarItem.text = `$(play) Decker-Webserver: http://localhost:${deckerPort}`;
   } else {
     spawnState = null;
-    statusBarItem.text =
-      "$(info) No Decker Server running in this session. Click to start.";
+    statusBarItem.text = "$(info) Decker-Webserver: Offline";
   }
 }
 

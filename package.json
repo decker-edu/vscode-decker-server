@@ -2,7 +2,7 @@
   "name": "decker-server",
   "displayName": "Decker Server",
   "description": "Automatically starts a decker server upon opening a decker workspace and offers commands run decker from inside Visual Studio Code.",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "publisher": "decker-edu",
   "repository": {
     "type": "git",
@@ -15,23 +15,7 @@
     "Other"
   ],
   "activationEvents": [
-    "workspaceContains:**/decker.yaml",
-    "onCommand:decker-server.build",
-    "onCommand:decker-server.crunch",
-    "onCommand:decker-server.publish",
-    "onCommand:decker-server.pdf",
-    "onCommand:decker-server.decks",
-    "onCommand:decker-server.handouts",
-    "onCommand:decker-server.pages",
-    "onCommand:decker-server.search-index",
-    "onCommand:decker-server.html",
-    "onCommand:decker-server.start",
-    "onCommand:decker-server.stop",
-    "onCommand:decker-server.clean",
-    "onCommand:decker-server.purge",
-    "onCommand:decker-server.toggle",
-    "onCommand:decker-server.open-browser",
-    "onCommand:decker-server.open-preview"
+    "workspaceContains:**/decker.yaml"
   ],
   "main": "./dist/extension.js",
   "l10n": "./l10n",
@@ -66,58 +50,47 @@
       "decker-server-submenu": [
         {
           "command": "decker-server.build",
-          "group": "decker/server@1",
-          "when": "explorerResourceIsFolder"
+          "group": "decker/server@1"
         },
         {
           "command": "decker-server.decks",
-          "group": "decker/server@7",
-          "when": "explorerResourceIsFolder"
+          "group": "decker/server@7"
         },
         {
           "command": "decker-server.pages",
-          "group": "decker/server@8",
-          "when": "explorerResourceIsFolder"
+          "group": "decker/server@8"
         },
         {
           "command": "decker-server.handouts",
-          "group": "decker/server@2",
-          "when": "explorerResourceIsFolder"
+          "group": "decker/server@2"
         },
         {
           "command": "decker-server.pdf",
-          "group": "decker/server@9",
-          "when": "explorerResourceIsFolder"
+          "group": "decker/server@9"
         },
         {
           "command": "decker-server.search-index",
-          "group": "decker/server@3",
-          "when": "explorerResourceIsFolder"
+          "group": "decker/server@3"
         },
         {
           "command": "decker-server.crunch",
-          "group": "decker/server@10",
-          "when": "explorerResourceIsFolder"
+          "group": "decker/server@10"
         },
         {
           "command": "decker-server.publish",
-          "group": "decker/server@4",
-          "when": "explorerResourceIsFolder"
+          "group": "decker/server@4"
         },
         {
           "command": "decker-server.clean",
-          "group": "decker/server@5",
-          "when": "explorerResourceIsFolder"
+          "group": "decker/server@5"
         },
         {
           "command": "decker-server.purge",
-          "group": "decker/server@6",
-          "when": "explorerResourceIsFolder"
+          "group": "decker/server@6"
         },
         {
           "command": "decker-server.start",
-          "group": "decker/server@11",
-          "when": "explorerResourceIsFolder"
+          "group": "decker/server@11"
         }
       ],
       "commandPalette": [
