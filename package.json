@@ -2,7 +2,7 @@
   "name": "decker-server",
   "displayName": "Decker Server",
   "description": "Automatically starts a decker server upon opening a decker workspace and offers commands run decker from inside Visual Studio Code.",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "publisher": "decker-edu",
   "repository": {
     "type": "git",

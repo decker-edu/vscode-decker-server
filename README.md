@@ -30,6 +30,10 @@ The webview advice about installing a decker server is functional but looks ugly
 
 ## Release Notes
 
+### 0.1.6
+
+Improved information given to the user when the program decker can not be found.
+
 ### 0.1.4
 
 Suppress error message that starts with WARNING

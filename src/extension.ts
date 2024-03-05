@@ -264,7 +264,10 @@ function showInstallWebview() {
     vscode.ViewColumn.Two,
     { enableScripts: true }
   );
-  panel.webview.html = configHTML;
+  const cssPath = path.join(extensionPath, "res", "install.css");
+  const localURI = vscode.Uri.file(cssPath);
+  const cssURI = panel.webview.asWebviewUri(localURI);
+  panel.webview.html = getInstallHTML(cssURI.toString());
 }
 
 function createStatusBarItem(context: vscode.ExtensionContext) {
@@ -923,16 +926,64 @@ const pleaseWaitHTML: string = String.raw`<!DOCTYPE html>
 </body>
 </html>`;
 
-const configHTML: string = String.raw`<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Install Decker</title>
-</head>
-<body>
-    <h1>Install decker</h1>
-	<p>We could not find decker on your system.</p>
-	<a href="https://elearning.uni-wuerzburg.de/decker/" style="width: 256px; height: 64px;">Please download decker here</a>
-</body>
-</html>`;
+function getInstallHTML(cssURI: string) {
+  const PATH: string | undefined = process.env.PATH || process.env.Path;
+  const platform = process.platform;
+  console.log(platform);
+  let pathString;
+  if (platform === "win32") {
+    pathString = PATH?.replace(/;/g, "\n");
+  } else {
+    pathString = PATH?.replace(/:/g, "\n");
+  }
+  const config = vscode.workspace.getConfiguration("decker");
+  return String.raw`<!DOCTYPE html>
+  <html lang="en">
+  <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Install Decker</title>
+      <link rel="stylesheet" href="${cssURI}">
+  </head>
+  <body>
+    <section>
+      <h1>Install decker</h1>
+      <div>
+        <p>We could not find the program configured to be executed as <code>decker</code> on your system.</p>
+        <p>You have configrued <code>decker</code> to be run as the program:</p>
+        <p>
+          <code>
+            ${config.get("executable.command")}
+          </code>
+        </p>
+        <p>You may change the program being executed as <code>decker</code> in the <code>Decker Server</code> extension's settings. You can find these settings by pressing <code>CTRL + ,</code> or under <code>File</code>, <code>Preferences</code>, <code>Settings</code>.</p>
+      </div>
+    </section>
+    <section>
+      <h2>Please check your PATH</h2>
+      <div>
+        <p>The configured program can not be found inside a directory listed in your <code>PATH</code> environment variable.</p>
+        <p>The environment variable <code>PATH</code> or <code>Path</code> (on Windows) tells your system where to look for other programs.</p>
+        <p>If you have already downloaded and installed <code>decker</code>, please check if the program is in a directory in this list.</p>
+        <p>If it is not, please add the installation directory of <code>decker</code> to this list or move the executable into a directory in this list.</p>
+        <p>Guidelines on how to change your <code>PATH</code> depend on your operating system.</p>
+      </div>
+      <div>
+      <h3>Your PATH</h3>
+      <p>Your <code>PATH</code> is a list of directories, seperated by <code>:</code> or <code>;</code>. These are the contents of this environment variable:</p>
+      <p>
+        <pre><code>${pathString}</pre></code></p>
+      </div>
+    </section>
+    <section>
+      <h1>Download Decker</h1>
+      <div>
+        <p>You can download <code>decker</code> from one of the following locations:</p>
+        <a class="decker-link" href="https://decker.cs.tu-dortmund.de/">TU Dortmund</a>
+        <a class="decker-link" href="https://elearning.uni-wuerzburg.de/decker/">Universität Würzburg</a>
+        <a class="decker-link" href="https://github.com/decker-edu/decker/releases/">GitHub</a>
+      </div>
+    </section>
+  </body>
+  </html>`;
+}

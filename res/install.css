@@ -1,0 +1,31 @@
+section div {
+  border-left: 2px solid var(--vscode-settings-modifiedItemIndicator);
+  border-top-left-radius: 2px;
+  border-bottom-left-radius: 2px;
+  padding-left: 1rem;
+}
+
+a.decker-link {
+  display: block;
+
+  padding: 1rem;
+  margin: 1rem;
+
+  background-color: var(--vscode-button-background);
+  color: var(--vscode-button-foreground);
+
+  border: 1px solid var(--vscode-button-border);
+
+  text-decoration: none;
+  font-weight: bold;
+  text-align: center;
+}
+
+a.decker-link:hover {
+  background-color: var(--vscode-button-hoverBackground);
+}
+
+a.decker-link:active {
+  background-color: var(--vscode-button-foreground);
+  color: var(--vscode-button-background);
+}

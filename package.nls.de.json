@@ -1,8 +1,8 @@
 {
-	"extension.decker-server.description": "",
-	"extension.decker-server.config.autostart": "",
-	"extension.decker-server.config.port": "",
-	"extension.decker-server.config.command": "",
+	"extension.decker-server.description": "Bietet verschiedene Funktionen an, um das Programm decker aus Visual Studio Code heraus zu bedienen.",
+	"extension.decker-server.config.autostart": "Soll decker den Webserver automatisch beim Öffnen eines Projektordners starten?",
+	"extension.decker-server.config.port": "Auf welchem Port soll der Webserver von decker lauschen?",
+	"extension.decker-server.config.command": "Welches Programm soll als decker ausgeführt werden?",
 	"extension.decker-server.context-submenu.label": "Decker ...",
 	"extension.decker-server.start.title": "Server starten",
 	"extension.decker-server.stop.title": "Server stoppen",

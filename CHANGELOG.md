@@ -6,11 +6,15 @@ Changes may be tracked here.
 
 - Initial release
 
-## [0.0.11]
+## [0.1.1]
 
 - Added decker crunch and decker clean to available commands
 
-## [0.0.15]
+## [0.1.5]
 
 - Prevent clicking the status bar item to launch multiple servers at once if clicked rapidly.
 - Reworded labels of the status bar item
+
+## [0.1.6]
+
+- Improved the webview content displayed when decker can not be found.
