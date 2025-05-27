@@ -19,5 +19,6 @@
 	"extension.decker-server.crunch.title": "Videos komprimieren",
 	"extension.decker-server.publish.title": "Projekt auf Server veröffentlichen",
 	"extension.decker-server.open-preview.title": "Decker: Folien in Vorschau ansehen",
-	"extension.decker-server.open-browser.title": "Decker: Folien im Browser ansehen"
+	"extension.decker-server.open-browser.title": "Decker: Folien im Browser ansehen",
+     "extension.decker-server.deck.folder.description": "Gibt den Ordner an, in dem der decker-Prozess gestartet werden soll. Wenn leer, wird der Arbeitsbereichsordner verwendet."
 }

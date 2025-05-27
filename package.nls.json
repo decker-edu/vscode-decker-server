@@ -19,5 +19,6 @@
 	"extension.decker-server.crunch.title": "Compress videos",
     "extension.decker-server.publish.title": "Publish to remote server",
     "extension.decker-server.open-preview.title": "Decker: open slides in preview-panel",
-    "extension.decker-server.open-browser.title": "Decker: open slides in browser"
+    "extension.decker-server.open-browser.title": "Decker: open slides in browser",
+      "extension.decker-server.deck.folder.description": "Specifies the folder where to start the decker process. If empty, the workspace folder is used."
 }
