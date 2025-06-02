@@ -189,10 +189,11 @@ async function openPreview() {
       return;
     }
   }
-  if (!!editor) {
-    const htmlPath: string | undefined = getDocumentHTMLPath(editor.document);
-    if (!!htmlPath) {
-      panel.webview.html = makePreviewHTML(htmlPath, webviewURI.toString());
+  if (editor) {
+    const relativePath = getDocumentHTMLPath(editor.document);
+    if (relativePath) {
+      const urlPath = getServerRelativePath(relativePath);
+      panel.webview.html = makePreviewHTML(urlPath, webviewURI.toString());
     } else {
       panel.webview.html = makeErrorHTML(
         vscode.l10n.t("Preview was not opened in a markdown file."),
@@ -237,6 +238,18 @@ function getDocumentHTMLPath(
   return undefined;
 }
 
+function getServerRelativePath(relative: string): string {
+    let config = vscode.workspace.getConfiguration("decker");
+    let deckFolder: string = config.get("deck.folder") || "";
+    if (deckFolder.trim() !== "" && relative.startsWith(deckFolder)) {
+        relative = relative.substring(deckFolder.length);
+        if (relative.startsWith("/") || relative.startsWith("\\")) {
+            relative = relative.substring(1);
+        }
+    }
+    return relative;
+}
+
 async function openBrowser() {
   const editor = vscode.window.activeTextEditor;
   if (!editor) {
@@ -249,9 +262,11 @@ async function openBrowser() {
       return;
     }
   }
-  let path = getDocumentHTMLPath(editor.document);
-  if (path) {
-    open(`http://localhost:${deckerPort}/${path}`);
+  let relativePath = getDocumentHTMLPath(editor.document);
+  if (relativePath) {
+    // strip deck.folder prefix from the relative path
+    const urlPath = getServerRelativePath(relativePath);
+    open(`http://localhost:${deckerPort}/${urlPath}`);
   } else {
     open(`http://localhost:${deckerPort}`);
   }
@@ -733,7 +748,17 @@ async function startDeckerServer() {
       );
       return;
     }
-    const workspaceDirecotry = workspaceFolders[0].uri.fsPath;
+      
+    // Read the deck folder setting
+    let config = vscode.workspace.getConfiguration("decker");
+    let deckFolder: string = config.get("deck.folder") || "";
+    
+    let workspaceDirecotry = workspaceFolders[0].uri.fsPath;
+    if (deckFolder.trim() !== "") {
+      // If deckFolder is a relative path, make it relative to the workspace folder.
+      workspaceDirecotry = path.isAbsolute(deckFolder) ? deckFolder : path.join(workspaceDirecotry, deckFolder);
+    }
+    
     let occupied: boolean = await portOccupied(port);
     while (occupied) {
       port = +port + 1;
