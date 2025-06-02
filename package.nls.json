@@ -1,8 +1,9 @@
 {
     "extension.decker-server.description": "Offers a range of utilities to control decker from within Visual Studio Code. Prime function is the control of the integrated webserver.",
-    "extension.decker-server.config.autostart": "Start the Decker Server automatically in the background when opening a decker workspace?",
+    "extension.decker-server.config.autostart": "Start the decker webserver automatically in the background when opening a decker workspace?",
     "extension.decker-server.config.port": "The default port that decker should be started on. Will move up in value if port is already in use.",
     "extension.decker-server.config.command": "The path or command to execute decker. If installed and on your PATH, 'decker' should suffice but if you want to use another executable change this value.",
+    "extension.decker-server.config.workingDirectory": "Specifies the directory where to start the decker process. If empty, the workspace folder is used.",
     "extension.decker-server.context-submenu.label": "Decker ...",
     "extension.decker-server.start.title": "Start Decker Server",
     "extension.decker-server.stop.title": "Stop Decker Server",
@@ -19,6 +20,5 @@
 	"extension.decker-server.crunch.title": "Compress videos",
     "extension.decker-server.publish.title": "Publish to remote server",
     "extension.decker-server.open-preview.title": "Decker: open slides in preview-panel",
-    "extension.decker-server.open-browser.title": "Decker: open slides in browser",
-      "extension.decker-server.deck.folder.description": "Specifies the folder where to start the decker process. If empty, the workspace folder is used."
+    "extension.decker-server.open-browser.title": "Decker: open slides in browser"
 }

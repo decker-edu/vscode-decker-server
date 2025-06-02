@@ -18,3 +18,7 @@ Changes may be tracked here.
 ## [0.1.6]
 
 - Improved the webview content displayed when decker can not be found.
+
+## [0.1.7]
+
+- Add configuration option to allow decker to be executed in subdirectories.

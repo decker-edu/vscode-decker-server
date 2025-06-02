@@ -3,6 +3,7 @@
 	"extension.decker-server.config.autostart": "Soll decker den Webserver automatisch beim Öffnen eines Projektordners starten?",
 	"extension.decker-server.config.port": "Auf welchem Port soll der Webserver von decker lauschen?",
 	"extension.decker-server.config.command": "Welches Programm soll als decker ausgeführt werden?",
+	"extension.decker-server.config.workingDirectory": "Gibt den Ordner an, in dem decker gestartet werden soll. Wenn leer, wird der Arbeitsbereichsordner verwendet.",
 	"extension.decker-server.context-submenu.label": "Decker ...",
 	"extension.decker-server.start.title": "Server starten",
 	"extension.decker-server.stop.title": "Server stoppen",
@@ -19,6 +20,5 @@
 	"extension.decker-server.crunch.title": "Videos komprimieren",
 	"extension.decker-server.publish.title": "Projekt auf Server veröffentlichen",
 	"extension.decker-server.open-preview.title": "Decker: Folien in Vorschau ansehen",
-	"extension.decker-server.open-browser.title": "Decker: Folien im Browser ansehen",
-     "extension.decker-server.deck.folder.description": "Gibt den Ordner an, in dem der decker-Prozess gestartet werden soll. Wenn leer, wird der Arbeitsbereichsordner verwendet."
+	"extension.decker-server.open-browser.title": "Decker: Folien im Browser ansehen"
 }

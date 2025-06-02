@@ -239,15 +239,15 @@ function getDocumentHTMLPath(
 }
 
 function getServerRelativePath(relative: string): string {
-    let config = vscode.workspace.getConfiguration("decker");
-    let deckFolder: string = config.get("deck.folder") || "";
-    if (deckFolder.trim() !== "" && relative.startsWith(deckFolder)) {
-        relative = relative.substring(deckFolder.length);
-        if (relative.startsWith("/") || relative.startsWith("\\")) {
-            relative = relative.substring(1);
-        }
+  let config = vscode.workspace.getConfiguration("decker");
+  let deckFolder: string = config.get("executable.workingDirectory") || "";
+  if (deckFolder.trim() !== "" && relative.startsWith(deckFolder)) {
+    relative = relative.substring(deckFolder.length);
+    if (relative.startsWith("/") || relative.startsWith("\\")) {
+      relative = relative.substring(1);
     }
-    return relative;
+  }
+  return relative;
 }
 
 async function openBrowser() {
@@ -338,7 +338,12 @@ async function cleanProject() {
     );
     return;
   }
-  const workspaceDirecotry = workspaceFolders[0].uri.fsPath;
+  let workspaceDirecotry: string;
+  try {
+    workspaceDirecotry = getDeckerWorkingDirectory();
+  } catch (error) {
+    return;
+  }
   const localProcess = spawn(command, ["clean", "-e"], {
     cwd: workspaceDirecotry,
     env: process.env,
@@ -352,7 +357,9 @@ async function cleanProject() {
     displayErrorMessage(message);
   });
   localProcess.on("exit", (code) => {
-    vscode.window.showInformationMessage("Finished cleaning project.");
+    vscode.window.showInformationMessage(
+      `Finished cleaning project:\n${workspaceDirecotry}`
+    );
     if (code) {
       logChannel.appendLine(`[DECKER EXIT] decker clean exitcode: ${code}`);
     } else {
@@ -371,16 +378,14 @@ async function purgeProject() {
     showInstallWebview();
     return;
   }
-  const workspaceFolders = vscode.workspace.workspaceFolders;
-  if (!workspaceFolders) {
-    vscode.window.showErrorMessage(
-      "No workspace is open to clean a project in."
-    );
+  let workingDirectory: string;
+  try {
+    workingDirectory = getDeckerWorkingDirectory();
+  } catch (error) {
     return;
   }
-  const workspaceDirecotry = workspaceFolders[0].uri.fsPath;
   const localProcess = spawn(command, ["purge", "-e"], {
-    cwd: workspaceDirecotry,
+    cwd: workingDirectory,
     env: process.env,
   });
   localProcess.stdout.on("data", (data) => {
@@ -392,7 +397,9 @@ async function purgeProject() {
     displayErrorMessage(message);
   });
   localProcess.on("exit", (code) => {
-    vscode.window.showInformationMessage("Finished purging project.");
+    vscode.window.showInformationMessage(
+      `Finished purging project:\n${workingDirectory}`
+    );
     if (code) {
       logChannel.appendLine(`[DECKER EXIT] decker purge exitcode: ${code}`);
     } else {
@@ -412,14 +419,12 @@ async function buildProject() {
       showInstallWebview();
       return resolve();
     }
-    const workspaceFolders = vscode.workspace.workspaceFolders;
-    if (!workspaceFolders) {
-      vscode.window.showErrorMessage(
-        "No workspace is open to run a decker command in."
-      );
-      return resolve();
+    let workspaceDirecotry: string;
+    try {
+      workspaceDirecotry = getDeckerWorkingDirectory();
+    } catch (error) {
+      return reject(error);
     }
-    const workspaceDirecotry = workspaceFolders[0].uri.fsPath;
     const localProcess = spawn(command, ["-e"], {
       cwd: workspaceDirecotry,
       env: process.env,
@@ -433,7 +438,9 @@ async function buildProject() {
       displayErrorMessage(message);
     });
     localProcess.on("exit", (code) => {
-      vscode.window.showInformationMessage("Finished building project.");
+      vscode.window.showInformationMessage(
+        `Finished building project:\n${workspaceDirecotry}`
+      );
       if (code) {
         logChannel.appendLine(`[DECKER EXIT] decker exitcode: ${code}`);
       } else {
@@ -456,14 +463,12 @@ async function buildHTML() {
       showInstallWebview();
       return resolve();
     }
-    const workspaceFolders = vscode.workspace.workspaceFolders;
-    if (!workspaceFolders) {
-      vscode.window.showErrorMessage(
-        "No workspace is open to run a decker command in."
-      );
-      return resolve();
+    let workspaceDirecotry: string;
+    try {
+      workspaceDirecotry = getDeckerWorkingDirectory();
+    } catch (error) {
+      return;
     }
-    const workspaceDirecotry = workspaceFolders[0].uri.fsPath;
     const localProcess = spawn(command, ["html", "-e"], {
       cwd: workspaceDirecotry,
       env: process.env,
@@ -499,14 +504,12 @@ async function publishProject() {
     showInstallWebview();
     return;
   }
-  const workspaceFolders = vscode.workspace.workspaceFolders;
-  if (!workspaceFolders) {
-    vscode.window.showErrorMessage(
-      "No workspace is open to run a decker command in."
-    );
+  let workspaceDirecotry: string;
+  try {
+    workspaceDirecotry = getDeckerWorkingDirectory();
+  } catch (error) {
     return;
   }
-  const workspaceDirecotry = workspaceFolders[0].uri.fsPath;
   const localProcess = spawn(command, ["publish", "-e"], {
     cwd: workspaceDirecotry,
     env: process.env,
@@ -539,14 +542,12 @@ async function crunchVideos() {
     showInstallWebview();
     return;
   }
-  const workspaceFolders = vscode.workspace.workspaceFolders;
-  if (!workspaceFolders) {
-    vscode.window.showErrorMessage(
-      "No workspace is open to run a decker command in."
-    );
+  let workspaceDirecotry: string;
+  try {
+    workspaceDirecotry = getDeckerWorkingDirectory();
+  } catch (error) {
     return;
   }
-  const workspaceDirecotry = workspaceFolders[0].uri.fsPath;
   const localProcess = spawn(command, ["crunch", "-e"], {
     cwd: workspaceDirecotry,
     env: process.env,
@@ -577,14 +578,12 @@ async function buildDecks() {
     showInstallWebview();
     return;
   }
-  const workspaceFolders = vscode.workspace.workspaceFolders;
-  if (!workspaceFolders) {
-    vscode.window.showErrorMessage(
-      "No workspace is open to run a decker command in."
-    );
+  let workspaceDirecotry: string;
+  try {
+    workspaceDirecotry = getDeckerWorkingDirectory();
+  } catch (error) {
     return;
   }
-  const workspaceDirecotry = workspaceFolders[0].uri.fsPath;
   const localProcess = spawn(command, ["decks", "-e"], {
     cwd: workspaceDirecotry,
     env: process.env,
@@ -615,14 +614,12 @@ async function buildHandouts() {
     showInstallWebview();
     return;
   }
-  const workspaceFolders = vscode.workspace.workspaceFolders;
-  if (!workspaceFolders) {
-    vscode.window.showErrorMessage(
-      "No workspace is open to run a decker command in."
-    );
+  let workspaceDirecotry: string;
+  try {
+    workspaceDirecotry = getDeckerWorkingDirectory();
+  } catch (error) {
     return;
   }
-  const workspaceDirecotry = workspaceFolders[0].uri.fsPath;
   const localProcess = spawn(command, ["handouts", "-e"], {
     cwd: workspaceDirecotry,
     env: process.env,
@@ -653,14 +650,12 @@ async function buildPages() {
     showInstallWebview();
     return;
   }
-  const workspaceFolders = vscode.workspace.workspaceFolders;
-  if (!workspaceFolders) {
-    vscode.window.showErrorMessage(
-      "No workspace is open to run a decker command in."
-    );
+  let workspaceDirecotry: string;
+  try {
+    workspaceDirecotry = getDeckerWorkingDirectory();
+  } catch (error) {
     return;
   }
-  const workspaceDirecotry = workspaceFolders[0].uri.fsPath;
   const localProcess = spawn(command, ["pages", "-e"], {
     cwd: workspaceDirecotry,
     env: process.env,
@@ -691,14 +686,12 @@ async function buildSearchIndex() {
     showInstallWebview();
     return;
   }
-  const workspaceFolders = vscode.workspace.workspaceFolders;
-  if (!workspaceFolders) {
-    vscode.window.showErrorMessage(
-      "No workspace is open to clean a project in."
-    );
+  let workspaceDirecotry: string;
+  try {
+    workspaceDirecotry = getDeckerWorkingDirectory();
+  } catch (error) {
     return;
   }
-  const workspaceDirecotry = workspaceFolders[0].uri.fsPath;
   const localProcess = spawn(command, ["search-index", "-e"], {
     cwd: workspaceDirecotry,
     env: process.env,
@@ -741,24 +734,12 @@ async function startDeckerServer() {
     );
     updateStatusBarItem();
   } else {
-    const workspaceFolders = vscode.workspace.workspaceFolders;
-    if (!workspaceFolders) {
-      vscode.window.showErrorMessage(
-        "No workspace is open to start a decker server in."
-      );
+    let workingDirectory: string;
+    try {
+      workingDirectory = getDeckerWorkingDirectory();
+    } catch (error) {
       return;
     }
-      
-    // Read the deck folder setting
-    let config = vscode.workspace.getConfiguration("decker");
-    let deckFolder: string = config.get("deck.folder") || "";
-    
-    let workspaceDirecotry = workspaceFolders[0].uri.fsPath;
-    if (deckFolder.trim() !== "") {
-      // If deckFolder is a relative path, make it relative to the workspace folder.
-      workspaceDirecotry = path.isAbsolute(deckFolder) ? deckFolder : path.join(workspaceDirecotry, deckFolder);
-    }
-    
     let occupied: boolean = await portOccupied(port);
     while (occupied) {
       port = +port + 1;
@@ -766,7 +747,7 @@ async function startDeckerServer() {
     }
     deckerPort = port;
     deckerProcess = spawn(command, ["--server", "-p", `${port}`, "-e"], {
-      cwd: workspaceDirecotry,
+      cwd: workingDirectory,
       env: process.env,
     });
     deckerProcess.stdout.on("data", (data) => {
@@ -798,7 +779,7 @@ async function startDeckerServer() {
     });
     deckerProcess.on("spawn", (event: any) => {
       vscode.window.showInformationMessage(
-        `Started Decker Server in: ${workspaceDirecotry}:${port}`
+        `Started Decker Server in: ${workingDirectory}:${port}`
       );
       updateStatusBarItem();
     });
@@ -884,6 +865,29 @@ function getStorageDirectory(context: vscode.ExtensionContext): string {
   return storage;
 }
 
+function getDeckerWorkingDirectory(): string {
+  const workspaceFolders = vscode.workspace.workspaceFolders;
+  if (!workspaceFolders) {
+    vscode.window.showErrorMessage(
+      "No workspace is open to start a decker server in."
+    );
+    throw new Error("No workspace folders.");
+  }
+
+  // Read the deck folder setting
+  let config = vscode.workspace.getConfiguration("decker");
+  let deckFolder: string = config.get("executable.workingDirectory") || "";
+
+  let workspaceDirecotry = workspaceFolders[0].uri.fsPath;
+  if (deckFolder.trim() !== "") {
+    // If deckFolder is a relative path, make it relative to the workspace folder.
+    workspaceDirecotry = path.isAbsolute(deckFolder)
+      ? deckFolder
+      : path.join(workspaceDirecotry, deckFolder);
+  }
+  return workspaceDirecotry;
+}
+
 async function runDeckerPDF() {
   const platform = process.platform;
   if (platform === "win32") {
@@ -903,7 +907,12 @@ async function runDeckerPDF() {
     );
     return;
   }
-  const workspaceDirecotry = workspaceFolders[0].uri.fsPath;
+  let workspaceDirecotry: string;
+  try {
+    workspaceDirecotry = getDeckerWorkingDirectory();
+  } catch (error) {
+    return;
+  }
   const localProcess = spawn(command, ["pdf", "-j1"], {
     cwd: workspaceDirecotry,
     env: process.env,

@@ -2,7 +2,7 @@
   "name": "decker-server",
   "displayName": "Decker Server",
   "description": "Automatically starts a decker server upon opening a decker workspace and offers commands run decker from inside Visual Studio Code.",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "publisher": "decker-edu",
   "repository": {
     "type": "git",
@@ -38,10 +38,10 @@
           "default": "decker",
           "description": "%extension.decker-server.config.command%"
         },
-        "decker.deck.folder": {
+        "decker.executable.workingDirectory": {
           "type": "string",
           "default": "",
-          "description": "%extension.decker-server.deck.folder.description%"
+          "description": "%extension.decker-server.config.workingDirectory%"
         }
       }
     },
@@ -223,7 +223,7 @@
     "@types/vscode": "^1.74.0",
     "@typescript-eslint/eslint-plugin": "^5.49.0",
     "@typescript-eslint/parser": "^5.49.0",
-    "@vscode/l10n-dev": "^0.0.22",
+    "@vscode/l10n-dev": "^0.0.35",
     "@vscode/test-electron": "^2.2.3",
     "eslint": "^8.33.0",
     "event-stream": "^4.0.1",
